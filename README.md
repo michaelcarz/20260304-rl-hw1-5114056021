@@ -4,8 +4,8 @@
 
 ## 🔗 線上 Demo
 
-👉 **[GitHub Pages Demo](https://YOUR_USERNAME.github.io/rl-hw1/)**  
-> ⬆️ 部署後請替換上方連結中的 `YOUR_USERNAME`
+👉 **[GitHub Pages Demo](https://michaelcarz.github.io/rl-hw1/)**  
+
 
 ---
 
