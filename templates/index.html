@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MDP Grid World — HW1: 網格地圖開發與策略評估">
+  <title>HW1 — MDP Grid World</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <h1>MDP Grid World</h1>
+  <p class="subtitle">HW1 — 網格地圖開發 ＆ 策略顯示與價值評估</p>
+
+  <!-- ─── Card 1: Grid Map (HW1-1) ─────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🗺️</span> HW1-1：網格地圖</div>
+
+    <div class="controls">
+      <label for="grid-size">維度 n：</label>
+      <select id="grid-size">
+        <option value="5" selected>5 × 5</option>
+        <option value="6">6 × 6</option>
+        <option value="7">7 × 7</option>
+        <option value="8">8 × 8</option>
+        <option value="9">9 × 9</option>
+      </select>
+      <button id="btn-generate" class="btn-primary">Generate Grid</button>
+    </div>
+
+    <div class="status-bar" id="status-bar"></div>
+
+    <div class="grid-wrapper">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="instructions">
+      <strong>操作說明：</strong>
+      第 1 次點擊 → 設定<strong style="color:var(--green)">起點（綠色）</strong>，
+      第 2 次點擊 → 設定<strong style="color:var(--red)">終點（紅色）</strong>，
+      後續點擊 → 設定<strong style="color:var(--gray)">障礙物（灰色）</strong>，最多 n−2 個。
+      再次點擊已設定的格子可取消。
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--green)"></span>起點 Start</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--red)"></span>終點 Goal</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--gray)"></span>障礙物 Obstacle</span>
+    </div>
+  </div>
+
+  <!-- ─── Card 2: Policy Evaluation (HW1-2) ────────────────────────── -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📊</span> HW1-2：策略顯示與價值評估</div>
+
+    <div class="controls">
+      <button id="btn-evaluate" class="btn-evaluate" disabled>📊 Evaluate Policy</button>
+    </div>
+
+    <div id="result-area" style="margin-top:1rem;"></div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

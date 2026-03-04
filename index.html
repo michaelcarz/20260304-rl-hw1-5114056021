@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MDP Grid World — HW1: 網格地圖開發與策略評估">
+    <title>HW1 — MDP Grid World</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ══════════════════════════════════════════════════════════════════════════
+   HW1 – Grid World  |  Modern Dark Theme (Inline for GitHub Pages)
+   ══════════════════════════════════════════════════════════════════════════ */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-2: #242837;
+            --border: #2e3347;
+            --text: #e4e6f0;
+            --text-dim: #8b8fa3;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, .35);
+            --green: #00b894;
+            --green-glow: rgba(0, 184, 148, .30);
+            --red: #fd5e72;
+            --red-glow: rgba(253, 94, 114, .30);
+            --gray: #636e82;
+            --gray-glow: rgba(99, 110, 130, .25);
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, .45);
+        }
+
+        html {
+            font-size: 16px
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem 4rem;
+            background-image: radial-gradient(circle at 20% 30%, rgba(108, 92, 231, .08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(0, 184, 148, .06) 0%, transparent 50%)
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: .25rem
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: .85rem;
+            margin-bottom: 2rem
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 860px;
+            margin-bottom: 1.5rem;
+            transition: border-color .3s
+        }
+
+        .card:hover {
+            border-color: var(--accent)
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem
+        }
+
+        .card-title .icon {
+            font-size: 1.15rem
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .75rem
+        }
+
+        .controls label {
+            font-size: .85rem;
+            color: var(--text-dim)
+        }
+
+        select,
+        button {
+            font-family: inherit;
+            font-size: .85rem;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-2);
+            color: var(--text);
+            padding: .5rem 1rem;
+            cursor: pointer;
+            transition: all .2s
+        }
+
+        select:hover,
+        button:hover {
+            border-color: var(--accent)
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 12px var(--accent-glow)
+        }
+
+        .btn-primary:hover {
+            background: #7c6cf0;
+            box-shadow: 0 0 20px var(--accent-glow)
+        }
+
+        .btn-primary:active {
+            transform: scale(.97)
+        }
+
+        .btn-evaluate {
+            background: linear-gradient(135deg, var(--accent), #a29bfe);
+            border: none;
+            color: #fff;
+            padding: .55rem 1.5rem;
+            box-shadow: 0 0 16px var(--accent-glow)
+        }
+
+        .btn-evaluate:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            box-shadow: none
+        }
+
+        /* Status bar */
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-top: .75rem
+        }
+
+        .status-tag {
+            font-size: .75rem;
+            font-weight: 500;
+            padding: .25rem .65rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: .3rem
+        }
+
+        .status-tag .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block
+        }
+
+        .tag-start {
+            background: rgba(0, 184, 148, .12);
+            color: var(--green)
+        }
+
+        .tag-start .dot {
+            background: var(--green)
+        }
+
+        .tag-end {
+            background: rgba(253, 94, 114, .12);
+            color: var(--red)
+        }
+
+        .tag-end .dot {
+            background: var(--red)
+        }
+
+        .tag-obs {
+            background: rgba(99, 110, 130, .15);
+            color: var(--gray)
+        }
+
+        .tag-obs .dot {
+            background: var(--gray)
+        }
+
+        /* Grid Map */
+        .grid-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+            margin-bottom: .5rem
+        }
+
+        .grid {
+            display: inline-grid;
+            gap: 3px;
+            background: var(--border);
+            padding: 3px;
+            border-radius: 8px
+        }
+
+        .cell {
+            width: 52px;
+            height: 52px;
+            background: var(--surface-2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .78rem;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all .15s;
+            position: relative;
+            user-select: none
+        }
+
+        .cell:hover {
+            background: #2d3145;
+            transform: scale(1.06);
+            z-index: 2
+        }
+
+        .cell.start {
+            background: var(--green);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 0 14px var(--green-glow)
+        }
+
+        .cell.end {
+            background: var(--red);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 0 14px var(--red-glow)
+        }
+
+        .cell.obstacle {
+            background: var(--gray);
+            color: #d0d0d0;
+            font-weight: 500;
+            box-shadow: 0 0 10px var(--gray-glow)
+        }
+
+        .cell::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, .15);
+            opacity: 0;
+            transition: opacity .3s
+        }
+
+        .cell:active::after {
+            opacity: 1
+        }
+
+        /* Instructions */
+        .instructions {
+            font-size: .8rem;
+            color: var(--text-dim);
+            line-height: 1.7;
+            margin-top: .5rem
+        }
+
+        .instructions strong {
+            color: var(--text)
+        }
+
+        /* Result Matrices */
+        .matrices {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center
+        }
+
+        .matrix-block {
+            text-align: center
+        }
+
+        .matrix-label {
+            font-size: .85rem;
+            font-weight: 600;
+            margin-bottom: .5rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: .06em
+        }
+
+        .matrix-grid {
+            display: inline-grid;
+            gap: 2px;
+            background: var(--border);
+            padding: 2px;
+            border-radius: 8px
+        }
+
+        .m-cell {
+            width: 54px;
+            height: 54px;
+            background: var(--surface-2);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .72rem;
+            color: var(--text);
+            position: relative;
+            transition: background .2s
+        }
+
+        .m-cell.start {
+            background: rgba(0, 184, 148, .18)
+        }
+
+        .m-cell.end {
+            background: rgba(253, 94, 114, .18)
+        }
+
+        .m-cell.obstacle {
+            background: rgba(99, 110, 130, .25);
+            color: var(--text-dim)
+        }
+
+        .m-cell .arrow {
+            font-size: 1.3rem;
+            line-height: 1
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: .75rem;
+            font-size: .78rem;
+            color: var(--text-dim)
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: .35rem
+        }
+
+        .legend-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            padding: .6rem 1.2rem;
+            border-radius: 10px;
+            font-size: .82rem;
+            color: var(--text);
+            box-shadow: 0 6px 28px rgba(0, 0, 0, .5);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .35s, transform .35s
+        }
+
+        .toast.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0)
+        }
+
+        @media(max-width:600px) {
+            .cell {
+                width: 42px;
+                height: 42px;
+                font-size: .7rem
+            }
+
+            .m-cell {
+                width: 44px;
+                height: 44px;
+                font-size: .65rem
+            }
+
+            .card {
+                padding: 1rem 1.15rem
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>MDP Grid World</h1>
+    <p class="subtitle">HW1 — 網格地圖開發 ＆ 策略顯示與價值評估</p>
+
+    <!-- ─── Card 1: Grid Map (HW1-1) ─────────────────────────────────── -->
+    <div class="card">
+        <div class="card-title"><span class="icon">🗺️</span> HW1-1：網格地圖</div>
+
+        <div class="controls">
+            <label for="grid-size">維度 n：</label>
+            <select id="grid-size">
+                <option value="5" selected>5 × 5</option>
+                <option value="6">6 × 6</option>
+                <option value="7">7 × 7</option>
+                <option value="8">8 × 8</option>
+                <option value="9">9 × 9</option>
+            </select>
+            <button id="btn-generate" class="btn-primary">Generate Grid</button>
+        </div>
+
+        <div class="status-bar" id="status-bar"></div>
+
+        <div class="grid-wrapper">
+            <div class="grid" id="grid"></div>
+        </div>
+
+        <div class="instructions">
+            <strong>操作說明：</strong>
+            第 1 次點擊 → 設定<strong style="color:var(--green)">起點（綠色）</strong>，
+            第 2 次點擊 → 設定<strong style="color:var(--red)">終點（紅色）</strong>，
+            後續點擊 → 設定<strong style="color:var(--gray)">障礙物（灰色）</strong>，最多 n−2 個。
+            再次點擊已設定的格子可取消。
+        </div>
+
+        <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--green)"></span>起點 Start</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--red)"></span>終點 Goal</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--gray)"></span>障礙物
+                Obstacle</span>
+        </div>
+    </div>
+
+    <!-- ─── Card 2: Policy Evaluation (HW1-2) ────────────────────────── -->
+    <div class="card">
+        <div class="card-title"><span class="icon">📊</span> HW1-2：策略顯示與價值評估</div>
+
+        <div class="controls">
+            <button id="btn-evaluate" class="btn-evaluate" disabled>📊 Evaluate Policy</button>
+        </div>
+
+        <div id="result-area" style="margin-top:1rem;"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        /* ══════════════════════════════════════════════════════════════════════════
+           HW1 – Grid World  |  Client-Side Logic (with Policy Evaluation in JS)
+           ══════════════════════════════════════════════════════════════════════════ */
+
+        // ── State ────────────────────────────────────────────────────────────────
+        let gridSize = 5;
+        let startCell = null;
+        let endCell = null;
+        let obstacles = [];
+        let maxObstacles = 3;
+
+        // ── Constants ────────────────────────────────────────────────────────────
+        const ACTIONS = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
+        const ACTION_NAMES = ['up', 'down', 'left', 'right'];
+        const ARROW_MAP = { up: '↑', down: '↓', left: '←', right: '→' };
+        const GAMMA = 0.9;
+        const THETA = 1e-6;
+        const REWARD_GOAL = 1.0;
+        const REWARD_OBSTACLE = -1.0;
+        const REWARD_STEP = -0.04;
+
+        // ── DOM refs ─────────────────────────────────────────────────────────────
+        const sizeSelect = document.getElementById('grid-size');
+        const genBtn = document.getElementById('btn-generate');
+        const evalBtn = document.getElementById('btn-evaluate');
+        const gridEl = document.getElementById('grid');
+        const statusBar = document.getElementById('status-bar');
+        const resultArea = document.getElementById('result-area');
+        const toastEl = document.getElementById('toast');
+
+        // ── Helpers ──────────────────────────────────────────────────────────────
+        function toast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 2200);
+        }
+
+        // ── Generate Grid ────────────────────────────────────────────────────────
+        function generateGrid() {
+            gridSize = parseInt(sizeSelect.value);
+            maxObstacles = gridSize - 2;
+            startCell = null; endCell = null; obstacles = [];
+            resultArea.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            gridEl.innerHTML = '';
+
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.r = r; cell.dataset.c = c;
+                    cell.textContent = r * gridSize + c + 1;
+                    cell.addEventListener('click', () => onCellClick(r, c, cell));
+                    gridEl.appendChild(cell);
+                }
+            }
+            updateStatus();
+            evalBtn.disabled = true;
+            toast(`Generated ${gridSize}×${gridSize} grid`);
+        }
+
+        // ── Cell Click ───────────────────────────────────────────────────────────
+        function onCellClick(r, c, el) {
+            if (startCell && startCell.r === r && startCell.c === c) {
+                startCell = null; el.classList.remove('start'); updateStatus(); return;
+            }
+            if (endCell && endCell.r === r && endCell.c === c) {
+                endCell = null; el.classList.remove('end'); updateStatus(); return;
+            }
+            const obsIdx = obstacles.findIndex(o => o.r === r && o.c === c);
+            if (obsIdx !== -1) {
+                obstacles.splice(obsIdx, 1); el.classList.remove('obstacle'); updateStatus(); return;
+            }
+            if (!startCell) {
+                startCell = { r, c }; el.classList.add('start'); toast('起點已設定 ✓');
+            } else if (!endCell) {
+                endCell = { r, c }; el.classList.add('end'); toast('終點已設定 ✓');
+            } else if (obstacles.length < maxObstacles) {
+                obstacles.push({ r, c }); el.classList.add('obstacle');
+                toast(`障礙物 ${obstacles.length}/${maxObstacles}`);
+            } else {
+                toast(`障礙物已達上限 (${maxObstacles})`); return;
+            }
+            updateStatus();
+        }
+
+        function updateStatus() {
+            statusBar.innerHTML =
+                `<span class="status-tag tag-start"><span class="dot"></span>起點 ${startCell ? '✓' : '—'}</span>` +
+                `<span class="status-tag tag-end"><span class="dot"></span>終點 ${endCell ? '✓' : '—'}</span>` +
+                `<span class="status-tag tag-obs"><span class="dot"></span>障礙 ${obstacles.length}/${maxObstacles}</span>`;
+            evalBtn.disabled = !(startCell && endCell);
+        }
+
+        // ── Policy Evaluation (client-side) ──────────────────────────────────────
+        function evaluatePolicy() {
+            if (!startCell || !endCell) { toast('請先設定起點和終點'); return; }
+
+            const n = gridSize;
+            const obsSet = new Set(obstacles.map(o => `${o.r},${o.c}`));
+            const endKey = `${endCell.r},${endCell.c}`;
+
+            // Random policy
+            const policy = [];
+            for (let r = 0; r < n; r++) {
+                const row = [];
+                for (let c = 0; c < n; c++) {
+                    const k = `${r},${c}`;
+                    if (k === endKey || obsSet.has(k)) { row.push(null); }
+                    else { row.push(ACTION_NAMES[Math.floor(Math.random() * 4)]); }
+                }
+                policy.push(row);
+            }
+
+            // Value function
+            const V = Array.from({ length: n }, () => new Float64Array(n));
+
+            for (let iter = 0; iter < 10000; iter++) {
+                let delta = 0;
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        const k = `${r},${c}`;
+                        if (k === endKey || obsSet.has(k)) continue;
+
+                        const action = policy[r][c];
+                        const [dr, dc] = ACTIONS[action];
+                        let nr = r + dr, nc = c + dc;
+
+                        // Boundary check
+                        if (nr < 0 || nr >= n || nc < 0 || nc >= n) { nr = r; nc = c; }
+                        // Obstacle check
+                        if (obsSet.has(`${nr},${nc}`)) { nr = r; nc = c; }
+
+                        let reward;
+                        const nk = `${nr},${nc}`;
+                        if (nk === endKey) reward = REWARD_GOAL;
+                        else if (obsSet.has(nk)) reward = REWARD_OBSTACLE;
+                        else reward = REWARD_STEP;
+
+                        const newV = reward + GAMMA * V[nr][nc];
+                        delta = Math.max(delta, Math.abs(newV - V[r][c]));
+                        V[r][c] = newV;
+                    }
+                }
+                if (delta < THETA) break;
+            }
+
+            renderResults(policy, V);
+            toast('策略評估完成 ✓');
+        }
+
+        // ── Render ────────────────────────────────────────────────────────────────
+        function renderResults(policy, V) {
+            const n = gridSize;
+            resultArea.innerHTML = `
+    <div class="matrices">
+      <div class="matrix-block">
+        <div class="matrix-label">Value Matrix — V(s)</div>
+        <div class="matrix-grid" id="value-matrix" style="grid-template-columns:repeat(${n},1fr)"></div>
+      </div>
+      <div class="matrix-block">
+        <div class="matrix-label">Policy Matrix — π(s)</div>
+        <div class="matrix-grid" id="policy-matrix" style="grid-template-columns:repeat(${n},1fr)"></div>
+      </div>
+    </div>`;
+
+            const vM = document.getElementById('value-matrix');
+            const pM = document.getElementById('policy-matrix');
+
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const cls = cellTypeClass(r, c);
+
+                    const vCell = document.createElement('div');
+                    vCell.className = 'm-cell' + cls;
+                    vCell.textContent = isObs(r, c) ? '▪' : isGoal(r, c) ? '★' : V[r][c].toFixed(2);
+                    vM.appendChild(vCell);
+
+                    const pCell = document.createElement('div');
+                    pCell.className = 'm-cell' + cls;
+                    const act = policy[r][c];
+                    if (isObs(r, c)) pCell.innerHTML = '<span class="arrow">▪</span>';
+                    else if (isGoal(r, c)) pCell.innerHTML = '<span class="arrow">★</span>';
+                    else if (act && ARROW_MAP[act]) pCell.innerHTML = `<span class="arrow">${ARROW_MAP[act]}</span>`;
+                    else pCell.textContent = '·';
+                    pM.appendChild(pCell);
+                }
+            }
+        }
+
+        function cellTypeClass(r, c) {
+            if (startCell && startCell.r === r && startCell.c === c) return ' start';
+            if (endCell && endCell.r === r && endCell.c === c) return ' end';
+            if (obstacles.some(o => o.r === r && o.c === c)) return ' obstacle';
+            return '';
+        }
+        function isGoal(r, c) { return endCell && endCell.r === r && endCell.c === c; }
+        function isObs(r, c) { return obstacles.some(o => o.r === r && o.c === c); }
+
+        // ── Bindings ─────────────────────────────────────────────────────────────
+        genBtn.addEventListener('click', generateGrid);
+        evalBtn.addEventListener('click', evaluatePolicy);
+        window.addEventListener('DOMContentLoaded', generateGrid);
+    </script>
+</body>
+
+</html>
