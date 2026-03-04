@@ -366,6 +366,30 @@
             line-height: 1
         }
 
+        .m-cell.on-path {
+            background: rgba(0, 184, 148, .35);
+            box-shadow: inset 0 0 12px rgba(0, 184, 148, .25)
+        }
+
+        .m-cell.on-path .arrow {
+            color: #fff;
+            font-weight: bold
+        }
+
+        .btn-vi {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            border: none;
+            color: #fff;
+            padding: .55rem 1.5rem;
+            box-shadow: 0 0 16px var(--green-glow)
+        }
+
+        .btn-vi:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            box-shadow: none
+        }
+
         /* Legend */
         .legend {
             display: flex;
@@ -486,6 +510,17 @@
         <div id="result-area" style="margin-top:1rem;"></div>
     </div>
 
+    <!-- ─── Card 3: Value Iteration (HW1-3) ────────────────────────── -->
+    <div class="card">
+        <div class="card-title"><span class="icon">🏆</span> HW1-3：最佳策略（價值迭代）</div>
+
+        <div class="controls">
+            <button id="btn-vi" class="btn-vi" disabled>🏆 Value Iteration</button>
+        </div>
+
+        <div id="vi-result-area" style="margin-top:1rem;"></div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
@@ -515,9 +550,11 @@
         const sizeSelect = document.getElementById('grid-size');
         const genBtn = document.getElementById('btn-generate');
         const evalBtn = document.getElementById('btn-evaluate');
+        const viBtn = document.getElementById('btn-vi');
         const gridEl = document.getElementById('grid');
         const statusBar = document.getElementById('status-bar');
         const resultArea = document.getElementById('result-area');
+        const viResultArea = document.getElementById('vi-result-area');
         const toastEl = document.getElementById('toast');
 
         // ── Helpers ──────────────────────────────────────────────────────────────
@@ -533,6 +570,7 @@
             maxObstacles = gridSize - 2;
             startCell = null; endCell = null; obstacles = [];
             resultArea.innerHTML = '';
+            viResultArea.innerHTML = '';
             gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
             gridEl.innerHTML = '';
 
@@ -548,6 +586,7 @@
             }
             updateStatus();
             evalBtn.disabled = true;
+            viBtn.disabled = true;
             toast(`Generated ${gridSize}×${gridSize} grid`);
         }
 
@@ -582,6 +621,7 @@
                 `<span class="status-tag tag-end"><span class="dot"></span>終點 ${endCell ? '✓' : '—'}</span>` +
                 `<span class="status-tag tag-obs"><span class="dot"></span>障礙 ${obstacles.length}/${maxObstacles}</span>`;
             evalBtn.disabled = !(startCell && endCell);
+            viBtn.disabled = !(startCell && endCell);
         }
 
         // ── Policy Evaluation (client-side) ──────────────────────────────────────
@@ -689,9 +729,171 @@
         function isGoal(r, c) { return endCell && endCell.r === r && endCell.c === c; }
         function isObs(r, c) { return obstacles.some(o => o.r === r && o.c === c); }
 
+        // ── Value Iteration (HW1-3) ─────────────────────────────────────────────
+        function valueIteration() {
+            if (!startCell || !endCell) { toast('請先設定起點和終點'); return; }
+
+            const n = gridSize;
+            const obsSet = new Set(obstacles.map(o => `${o.r},${o.c}`));
+            const endKey = `${endCell.r},${endCell.c}`;
+
+            // Value function
+            const V = Array.from({ length: n }, () => new Float64Array(n));
+
+            // Value Iteration
+            for (let iter = 0; iter < 10000; iter++) {
+                let delta = 0;
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        const k = `${r},${c}`;
+                        if (k === endKey || obsSet.has(k)) continue;
+
+                        let bestVal = -Infinity;
+                        for (const aName of ACTION_NAMES) {
+                            const [dr, dc] = ACTIONS[aName];
+                            let nr = r + dr, nc = c + dc;
+                            if (nr < 0 || nr >= n || nc < 0 || nc >= n) { nr = r; nc = c; }
+                            if (obsSet.has(`${nr},${nc}`)) { nr = r; nc = c; }
+
+                            let reward;
+                            if (`${nr},${nc}` === endKey) reward = REWARD_GOAL;
+                            else reward = REWARD_STEP;
+
+                            const val = reward + GAMMA * V[nr][nc];
+                            if (val > bestVal) bestVal = val;
+                        }
+                        delta = Math.max(delta, Math.abs(bestVal - V[r][c]));
+                        V[r][c] = bestVal;
+                    }
+                }
+                if (delta < THETA) break;
+            }
+
+            // Extract optimal policy from V*
+            const optPolicy = [];
+            for (let r = 0; r < n; r++) {
+                const row = [];
+                for (let c = 0; c < n; c++) {
+                    const k = `${r},${c}`;
+                    if (k === endKey || obsSet.has(k)) { row.push(null); continue; }
+
+                    let bestAct = null, bestVal = -Infinity;
+                    for (const aName of ACTION_NAMES) {
+                        const [dr, dc] = ACTIONS[aName];
+                        let nr = r + dr, nc = c + dc;
+                        if (nr < 0 || nr >= n || nc < 0 || nc >= n) { nr = r; nc = c; }
+                        if (obsSet.has(`${nr},${nc}`)) { nr = r; nc = c; }
+
+                        let reward;
+                        if (`${nr},${nc}` === endKey) reward = REWARD_GOAL;
+                        else reward = REWARD_STEP;
+
+                        const val = reward + GAMMA * V[nr][nc];
+                        if (val > bestVal) { bestVal = val; bestAct = aName; }
+                    }
+                    row.push(bestAct);
+                }
+                optPolicy.push(row);
+            }
+
+            // Trace optimal path from start to end
+            const pathSet = new Set();
+            let cr = startCell.r, cc = startCell.c;
+            const maxSteps = n * n;
+            for (let step = 0; step < maxSteps; step++) {
+                const pk = `${cr},${cc}`;
+                pathSet.add(pk);
+                if (pk === endKey) break;
+                const act = optPolicy[cr][cc];
+                if (!act) break;
+                const [dr, dc] = ACTIONS[act];
+                let nr = cr + dr, nc = cc + dc;
+                if (nr < 0 || nr >= n || nc < 0 || nc >= n) break;
+                if (obsSet.has(`${nr},${nc}`)) break;
+                if (pathSet.has(`${nr},${nc}`)) break; // avoid loops
+                cr = nr; cc = nc;
+            }
+
+            renderVIResults(optPolicy, V, pathSet);
+            toast('價值迭代完成 — 最佳策略已推導 ✓');
+        }
+
+        function renderVIResults(policy, V, pathSet) {
+            const n = gridSize;
+
+            // Find min/max V for heatmap coloring
+            let vMin = Infinity, vMax = -Infinity;
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const k = `${r},${c}`;
+                    if (isObs(r, c)) continue;
+                    if (V[r][c] < vMin) vMin = V[r][c];
+                    if (V[r][c] > vMax) vMax = V[r][c];
+                }
+            }
+            const vRange = vMax - vMin || 1;
+
+            viResultArea.innerHTML = `
+    <div class="matrices">
+      <div class="matrix-block">
+        <div class="matrix-label">Optimal Value — V*(s)</div>
+        <div class="matrix-grid" id="vi-value-matrix" style="grid-template-columns:repeat(${n},1fr)"></div>
+      </div>
+      <div class="matrix-block">
+        <div class="matrix-label">Optimal Policy — π*(s)</div>
+        <div class="matrix-grid" id="vi-policy-matrix" style="grid-template-columns:repeat(${n},1fr)"></div>
+      </div>
+    </div>`;
+
+            const vM = document.getElementById('vi-value-matrix');
+            const pM = document.getElementById('vi-policy-matrix');
+
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const k = `${r},${c}`;
+                    const isOnPath = pathSet.has(k);
+
+                    // Value cell with heatmap
+                    const vCell = document.createElement('div');
+                    let cls = cellTypeClass(r, c);
+                    if (isOnPath && !isObs(r, c)) cls += ' on-path';
+                    vCell.className = 'm-cell' + cls;
+
+                    if (isObs(r, c)) {
+                        vCell.textContent = '▪';
+                    } else if (isGoal(r, c)) {
+                        vCell.textContent = '0.00';
+                    } else {
+                        vCell.textContent = V[r][c].toFixed(2);
+                        // Heatmap: blend from blue (low) to warm (high)
+                        const t = (V[r][c] - vMin) / vRange;
+                        if (!isOnPath) {
+                            const h = 220 - t * 180; // 220 (blue) → 40 (warm)
+                            vCell.style.background = `hsla(${h}, 55%, 45%, ${0.15 + t * 0.35})`;
+                        }
+                    }
+                    vM.appendChild(vCell);
+
+                    // Policy cell
+                    const pCell = document.createElement('div');
+                    let pCls = cellTypeClass(r, c);
+                    if (isOnPath && !isObs(r, c)) pCls += ' on-path';
+                    pCell.className = 'm-cell' + pCls;
+
+                    const act = policy[r][c];
+                    if (isObs(r, c)) pCell.innerHTML = '<span class="arrow">▪</span>';
+                    else if (isGoal(r, c)) pCell.innerHTML = '<span class="arrow">★</span>';
+                    else if (act && ARROW_MAP[act]) pCell.innerHTML = `<span class="arrow">${ARROW_MAP[act]}</span>`;
+                    else pCell.textContent = '·';
+                    pM.appendChild(pCell);
+                }
+            }
+        }
+
         // ── Bindings ─────────────────────────────────────────────────────────────
         genBtn.addEventListener('click', generateGrid);
         evalBtn.addEventListener('click', evaluatePolicy);
+        viBtn.addEventListener('click', valueIteration);
         window.addEventListener('DOMContentLoaded', generateGrid);
     </script>
 </body>
